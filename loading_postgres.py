@@ -34,23 +34,28 @@ def traitement(msg, parent_id=None):
     username = msg['username'] if 'username' in msg else None
     dt = msg['created_at']
     dt = dt[:10]+' '+dt[11:19]
-    # print("Recurse ", msg['id'], msg['depth'] if 'depth' in msg else '-', parent_id, dt)
-
-    if not msg['anonymous']:
-        # Postgres_engine.execute("""INSERT INTO "public"."User"  (username, user_id) VALUES (%s,%s) ON CONFLICT DO NOTHING;""", [msg['username'], msg['user_id']])
-        extract_document_mongo_user_collecton_to_postgress_data({'username': msg['username']})
+ 
+    try:
+        if not msg['anonymous']:
+            #insersion table User, course et Reselt
+            extract_document_mongo_user_collecton_to_postgress_data({'username': msg['username']})
         
-    # Postgres_engine.execute("""INSERT INTO Messages 
-    #                     (id, type, created_at, username, depth, body, parent_id) 
-    #                     VALUES (%s,%s,%s,%s,%s,%s,%s)
-    #                     ON CONFLICT DO UPDATE SET parent_id=VALUES(parent_id), depth=VALUES(depth);""",
-    #                     [msg['id'], msg['type'], dt, username, msg['depth'] if 'depth' in msg else None, msg['body'], parent_id])
-    
-    Postgres_engine.execute("""INSERT INTO Message 
-                        (id, type, created_at, username, depth, body, parent_id) 
-                        VALUES (%s,%s,%s,%s,%s,%s,%s)
-                        ON CONFLICT DO NOTHING;""",
-                        [msg['id'], msg['type'], dt, username, msg['depth'] if 'depth' in msg else None, msg['body'], parent_id])
+        Postgres_engine.execute("""INSERT INTO Message 
+                            (id, type, created_at, username, depth, body, parent_id, endorsed) 
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                            ON CONFLICT DO NOTHING;""",
+                            [msg['id'], 
+                             msg['type'], 
+                             dt, 
+                             username, 
+                             msg['depth'] if 'depth' in msg else None,
+                             msg['body'], 
+                             parent_id,
+                             msg['endorsed'] if 'endorsed' in msg else None])
+    except:
+        print("----------------------------------------------------------------------")  
+        print(f"error traitement --> {msg['id']}  !!!! ")  
+        print("----------------------------------------------------------------------")   
 
 def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
     '''
@@ -73,16 +78,31 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
     #insetion des données dans la base
     for doc in cursor:
         start_time_op = time.time()
-     
-        #insersion table User, course et Reselt
-        extract_document_mongo_user_collecton_to_postgress_data({'username':doc['content']['username']})
-     
-        #insersion table Treads
-        Postgres_engine.execute("""INSERT INTO "public"."Threads" ("_id", "title","course_id","username") VALUES (%s,%s,%s,%s) ON CONFLICT DO NOTHING;""", [doc['_id'], doc['content']['title'], doc['content']['course_id'], doc['content']['username']])
-    
-        #insersion récursive table message
-        utils.recur_message(doc['content'], traitement)
         
+        username = doc['content']['username'] if 'username' in doc['content'] else None
+        
+        try:
+            if not doc['content']['anonymous']:
+                #insersion table User, course et Reselt
+                extract_document_mongo_user_collecton_to_postgress_data({'username':username})
+       
+     
+            #insersion table Treads
+            Postgres_engine.execute("""INSERT INTO "public"."Threads" ("_id", "title","course_id","username") VALUES (%s,%s,%s,%s) ON CONFLICT DO NOTHING;""", 
+                                    [doc['_id'],
+                                     doc['content']['title'], 
+                                     doc['content']['course_id'],
+                                     username])
+        
+            
+            #insersion récursive table message
+            utils.recur_message(doc['content'], traitement)
+            
+        except:
+            print("----------------------------------------------------------------------")  
+            print(f"error extract_document_mongo_forum_collecton_to_postgress_data --> {doc['_id']}  !!!!")  
+            print("----------------------------------------------------------------------")   
+            
         if k%100 == 0:
             print(k,
                 "  -Temps d'exécution courent: {:.1f} secondes".format(time.time() - start_time),
@@ -121,7 +141,7 @@ def extract_document_mongo_user_collecton_to_postgress_data(filter_={},semple=No
                     pass
             except:
                 print("----------------------------------------------------------------------")  
-                print(f"error extract_document_mongo_user_collecton_to_postgress_data --> {sub_doc}  !!!!")  
+                print(f"error extract_document_mongo_user_collecton_to_postgress_data --> {sub_doc}  !!!!  ")  
                 print("----------------------------------------------------------------------")   
             
             
