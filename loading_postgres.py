@@ -8,6 +8,7 @@ Created on Fri Mar  3 17:53:21 2023
 import json, utils, yaml
 from pymongo import MongoClient
 from sqlalchemy import create_engine
+import time
 
 #ouverture du fichier de configuration
 with open('config.yml', 'r') as file:
@@ -22,7 +23,6 @@ user = client[config['mongo']['database']].user
 
 #connection à la base postgres
 Postgres_engine = create_engine(config['postgres']['url'])
-
 
 
 def traitement(msg, parent_id=None):
@@ -75,12 +75,14 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
         k+=1
         #print(json.dumps(doc, indent=4))
         
+        extract_document_mongo_user_collecton_to_postgress_data({'username':doc['content']['username']})
+        
         #insersion table course
-        Postgres_engine.execute("INSERT INTO PUBLIC.course (course_id) VALUES (%s) ON CONFLICT DO NOTHING;", [doc['content']['course_id']])
+        # Postgres_engine.execute("INSERT INTO PUBLIC.course (course_id) VALUES (%s) ON CONFLICT DO NOTHING;", [doc['content']['course_id']])
         
         #insersion table User
-        Postgres_engine.execute("""INSERT INTO "public"."User" ("username", "user_id") VALUES (%s,%s) ON CONFLICT DO NOTHING;""", [doc['content']['username'], doc['content']['user_id']])
-        
+        # Postgres_engine.execute("""INSERT INTO "public"."User" ("username", "user_id") VALUES (%s,%s) ON CONFLICT DO NOTHING;""", [doc['content']['username'], doc['content']['user_id']])
+    
         #insersion table Treads
         Postgres_engine.execute("""INSERT INTO "public"."Threads" ("_id", "title","course_id","username") VALUES (%s,%s,%s,%s) ON CONFLICT DO NOTHING;""", [doc['_id'], doc['content']['title'], doc['content']['course_id'], doc['content']['username']])
     
@@ -88,17 +90,26 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
         utils.recur_message(doc['content'], traitement)
 
             
-def extract_document_mongo_user_collecton_to_postgress_data(semple=None):
+def extract_document_mongo_user_collecton_to_postgress_data(filter_={},semple=None):
+    start_time = time.time()
 
     if semple is None:
-        cursor = user.find(filter=None)
+        cursor = user.find(filter=filter_)
     else:
-        cursor = user.find(filter=None).limit(semple)
+        cursor = user.find(filter=filter_).limit(semple)
     
     k=0
     for doc in cursor:
         # print(doc['_id'])
-        Postgres_engine.execute("""INSERT INTO "public"."User" ("_id", "username", "user_id") VALUES (%s,%s,%s) ON CONFLICT DO NOTHING;""", [str(doc['_id']),doc['username'], doc['id']])
+        # print(doc['id'])
+        
+        start_time_op = time.time()
+        
+        Postgres_engine.execute("""INSERT INTO "public"."User" ("_id", "username", "user_id") VALUES (%s,%s,%s) ON CONFLICT DO NOTHING;""", 
+                                                                [str(doc['_id']),
+                                                                 doc['username'],
+                                                                 doc['id'] if 'id' in doc else None
+                                                                 ])
 
         for sub_doc in doc:
             try:
@@ -122,12 +133,16 @@ def extract_document_mongo_user_collecton_to_postgress_data(semple=None):
         
         k+=1
         
-        if k%300 == 0:
-            print(k)
+        if k%1 == 0:
+            print(k,
+                  "  -Temps d'exécution courent: {:.1f} secondes".format(time.time() - start_time),
+                  "  -Temps d'exécution operation: {:.1f} secondes".format(time.time() - start_time_op))
             
 def main():
-    # extract_document_mongo_forum_collecton_to_postgress_data(50)
-    extract_document_mongo_user_collecton_to_postgress_data(1000)
+    extract_document_mongo_forum_collecton_to_postgress_data(1)
+    
+    # extract_document_mongo_user_collecton_to_postgress_data()
+
 
 main()
 
