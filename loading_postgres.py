@@ -37,8 +37,9 @@ def traitement(msg, parent_id=None):
     # print("Recurse ", msg['id'], msg['depth'] if 'depth' in msg else '-', parent_id, dt)
 
     if not msg['anonymous']:
-        Postgres_engine.execute("""INSERT INTO "public"."User"  (username, user_id) VALUES (%s,%s) ON CONFLICT DO NOTHING;""", [msg['username'], msg['user_id']])
-    
+        # Postgres_engine.execute("""INSERT INTO "public"."User"  (username, user_id) VALUES (%s,%s) ON CONFLICT DO NOTHING;""", [msg['username'], msg['user_id']])
+        extract_document_mongo_user_collecton_to_postgress_data({'username': msg['username']})
+        
     # Postgres_engine.execute("""INSERT INTO Messages 
     #                     (id, type, created_at, username, depth, body, parent_id) 
     #                     VALUES (%s,%s,%s,%s,%s,%s,%s)
@@ -67,43 +68,36 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
     
     k=0
     
+    start_time = time.time()
+    
     #insetion des données dans la base
     for doc in cursor:
+        start_time_op = time.time()
      
-        if k%1000 == 0:
-            print(k)
-        k+=1
-        #print(json.dumps(doc, indent=4))
-        
+        #insersion table User, course et Reselt
         extract_document_mongo_user_collecton_to_postgress_data({'username':doc['content']['username']})
-        
-        #insersion table course
-        # Postgres_engine.execute("INSERT INTO PUBLIC.course (course_id) VALUES (%s) ON CONFLICT DO NOTHING;", [doc['content']['course_id']])
-        
-        #insersion table User
-        # Postgres_engine.execute("""INSERT INTO "public"."User" ("username", "user_id") VALUES (%s,%s) ON CONFLICT DO NOTHING;""", [doc['content']['username'], doc['content']['user_id']])
-    
+     
         #insersion table Treads
         Postgres_engine.execute("""INSERT INTO "public"."Threads" ("_id", "title","course_id","username") VALUES (%s,%s,%s,%s) ON CONFLICT DO NOTHING;""", [doc['_id'], doc['content']['title'], doc['content']['course_id'], doc['content']['username']])
     
         #insersion récursive table message
         utils.recur_message(doc['content'], traitement)
+        
+        if k%100 == 0:
+            print(k,
+                "  -Temps d'exécution courent: {:.1f} secondes".format(time.time() - start_time),
+                "  -Temps d'exécution operation: {:.1f} secondes".format(time.time() - start_time_op))
+        k+=1
 
             
 def extract_document_mongo_user_collecton_to_postgress_data(filter_={},semple=None):
-    start_time = time.time()
 
     if semple is None:
         cursor = user.find(filter=filter_)
     else:
         cursor = user.find(filter=filter_).limit(semple)
-    
-    k=0
+
     for doc in cursor:
-        # print(doc['_id'])
-        # print(doc['id'])
-        
-        start_time_op = time.time()
         
         Postgres_engine.execute("""INSERT INTO "public"."User" ("_id", "username", "user_id") VALUES (%s,%s,%s) ON CONFLICT DO NOTHING;""", 
                                                                 [str(doc['_id']),
@@ -114,7 +108,7 @@ def extract_document_mongo_user_collecton_to_postgress_data(filter_={},semple=No
         for sub_doc in doc:
             try:
                 if sub_doc != '_id' and sub_doc != 'id' and sub_doc != 'username':
-                    # print('table course:' + sub_doc)
+            
                     Postgres_engine.execute("INSERT INTO PUBLIC.course (course_id) VALUES (%s) ON CONFLICT DO NOTHING;", [sub_doc])
                     Postgres_engine.execute("""INSERT INTO "public"."Result" ("course_id","username", "grade", "certificate_delivered", "certificate_eligible","certificate_type") VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING;""", 
                                                                             [sub_doc,
@@ -130,19 +124,9 @@ def extract_document_mongo_user_collecton_to_postgress_data(filter_={},semple=No
                 print(f"error extract_document_mongo_user_collecton_to_postgress_data --> {sub_doc}  !!!!")  
                 print("----------------------------------------------------------------------")   
             
-        
-        k+=1
-        
-        if k%1 == 0:
-            print(k,
-                  "  -Temps d'exécution courent: {:.1f} secondes".format(time.time() - start_time),
-                  "  -Temps d'exécution operation: {:.1f} secondes".format(time.time() - start_time_op))
             
 def main():
-    extract_document_mongo_forum_collecton_to_postgress_data(1)
-    
-    # extract_document_mongo_user_collecton_to_postgress_data()
-
+    extract_document_mongo_forum_collecton_to_postgress_data()
 
 main()
 
