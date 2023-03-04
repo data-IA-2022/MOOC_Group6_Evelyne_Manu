@@ -87,5 +87,51 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
         #insersion récursive table message
         utils.recur_message(doc['content'], traitement)
 
-#main
-extract_document_mongo_forum_collecton_to_postgress_data(50)
+            
+def extract_document_mongo_user_collecton_to_postgress_data(semple=None):
+
+    if semple is None:
+        cursor = user.find(filter=None)
+    else:
+        cursor = user.find(filter=None).limit(semple)
+    
+    k=0
+    for doc in cursor:
+        # print(doc['_id'])
+        Postgres_engine.execute("""INSERT INTO "public"."User" ("_id", "username", "user_id") VALUES (%s,%s,%s) ON CONFLICT DO NOTHING;""", [str(doc['_id']),doc['username'], doc['id']])
+
+        for sub_doc in doc:
+            try:
+                if sub_doc != '_id' and sub_doc != 'id' and sub_doc != 'username':
+                    # print('table course:' + sub_doc)
+                    Postgres_engine.execute("INSERT INTO PUBLIC.course (course_id) VALUES (%s) ON CONFLICT DO NOTHING;", [sub_doc])
+                    Postgres_engine.execute("""INSERT INTO "public"."Result" ("course_id","username", "grade", "certificate_delivered", "certificate_eligible","certificate_type") VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING;""", 
+                                                                            [sub_doc,
+                                                                             doc['username'], 
+                                                                             doc[sub_doc]['grade'] if 'grade' in doc[sub_doc] else None,
+                                                                             doc[sub_doc]['Certificate Delivered'] if 'Certificate Delivered' in doc[sub_doc] else None,
+                                                                             doc[sub_doc]['Certificate Eligible'] if 'Certificate Eligible' in doc[sub_doc] else None,
+                                                                             doc[sub_doc]['Certificate Type'] if 'Certificate Type' in doc[sub_doc] else None
+                                                                             ])
+                    
+                    a= doc[sub_doc]['grade']
+                    print(sub_doc," ",a)
+                    pass
+            except:
+                print("----------------------------------------------------------------------")  
+                print(f"error extract_document_mongo_user_collecton_to_postgress_data --> {sub_doc}  !!!!")  
+                print("----------------------------------------------------------------------")   
+            
+        
+        k+=1
+        
+        if k%300 == 0:
+            print(k)
+            
+def main():
+    # extract_document_mongo_forum_collecton_to_postgress_data(50)
+    extract_document_mongo_user_collecton_to_postgress_data(1000)
+
+main()
+
+
