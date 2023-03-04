@@ -113,9 +113,6 @@ def extract_document_mongo_user_collecton_to_postgress_data(semple=None):
                                                                              doc[sub_doc]['Certificate Eligible'] if 'Certificate Eligible' in doc[sub_doc] else None,
                                                                              doc[sub_doc]['Certificate Type'] if 'Certificate Type' in doc[sub_doc] else None
                                                                              ])
-                    
-                    a= doc[sub_doc]['grade']
-                    print(sub_doc," ",a)
                     pass
             except:
                 print("----------------------------------------------------------------------")  
