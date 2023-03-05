@@ -67,48 +67,58 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
 
     #extractions des documents mongo
     if semple is None:
-        cursor = forum.find(filter=None, projection={'annotated_content_info': 0, '_id': 1})
+        cursor = forum.find(filter=None, projection={'_id': 1})
     else:
-        cursor = forum.find(filter=None, projection={'annotated_content_info': 0, '_id': 1}).limit(semple)
+        cursor = forum.find(filter=None, projection={ '_id': 1}).limit(semple)
     
     k=0
     
     start_time = time.time()
     
     #insetion des données dans la base
-    for doc in cursor:
+    for ident in cursor:
         start_time_op = time.time()
         
-        username = doc['content']['username'] if 'username' in doc['content'] else None
+        if k>5820:
         
-        try:
-            if not doc['content']['anonymous']:
-                #insersion table User, course et Reselt
-                extract_document_mongo_user_collecton_to_postgress_data({'username':username})
-       
-     
-            #insersion table Treads
-            Postgres_engine.execute("""INSERT INTO "public"."Threads" ("_id", "title","course_id","username") VALUES (%s,%s,%s,%s) ON CONFLICT DO NOTHING;""", 
-                                    [doc['_id'],
-                                     doc['content']['title'], 
-                                     doc['content']['course_id'],
-                                     username])
+            doc = forum.find_one(filter=ident, projection={'annotated_content_info': 0, '_id': 1})
+            
+            username = doc['content']['username'] if 'username' in doc['content'] else None
+            
+            try:
+                if not doc['content']['anonymous']:
+                    #insersion table User, course et Reselt
+                    extract_document_mongo_user_collecton_to_postgress_data({'username':username})
+           
+         
+                #insersion table Treads
+                Postgres_engine.execute("""INSERT INTO "public"."Threads" ("_id", "title","course_id","username") VALUES (%s,%s,%s,%s) ON CONFLICT DO NOTHING;""", 
+                                        [doc['_id'],
+                                         doc['content']['title'], 
+                                         doc['content']['course_id'],
+                                         username])
+            
+                
+                #insersion récursive table message
+                utils.recur_message(doc['content'], traitement)
+                
+            except:
+                print("----------------------------------------------------------------------")  
+                print(f"error extract_document_mongo_forum_collecton_to_postgress_data --> {doc['_id']}  !!!!")  
+                print("----------------------------------------------------------------------")   
+                
+            if k%100 == 0:
+                print(k,
+                    "  -Temps d'exécution courent: {:.1f} secondes".format(time.time() - start_time),
+                    "  -Temps d'exécution operation: {:.1f} secondes".format(time.time() - start_time_op))
+
+        else:
+            print(k)
+            print(ident)
         
-            
-            #insersion récursive table message
-            utils.recur_message(doc['content'], traitement)
-            
-        except:
-            print("----------------------------------------------------------------------")  
-            print(f"error extract_document_mongo_forum_collecton_to_postgress_data --> {doc['_id']}  !!!!")  
-            print("----------------------------------------------------------------------")   
-            
-        if k%100 == 0:
-            print(k,
-                "  -Temps d'exécution courent: {:.1f} secondes".format(time.time() - start_time),
-                "  -Temps d'exécution operation: {:.1f} secondes".format(time.time() - start_time_op))
         k+=1
 
+       
             
 def extract_document_mongo_user_collecton_to_postgress_data(filter_={},semple=None):
 
