@@ -117,7 +117,7 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
     for ident in cursor:
         start_time_op = time.time()
         
-        if k>-1:
+        if k>2000:
         
             doc = forum.find_one(filter=ident, projection={'annotated_content_info': 0, '_id': 1})
             
@@ -128,14 +128,19 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
                     #insersion table User, course et Reselt
                     extract_document_mongo_user_collecton_to_postgress_data({'username':username})
            
-         
+                content = doc['content'] if 'content' in doc else None
+                if content != None:
+                    comments_count = content['comments_count'] if 'comments_count' in content else None
+                else:
+                    comments_count=None
+            
                 #insersion table Treads
                 Postgres_engine.execute("""INSERT INTO "public"."Threads" ("_id", "title","course_id","username", "comments_count") VALUES (%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING;""", 
                                         [doc['_id'],
                                          doc['content']['title'], 
                                          doc['content']['course_id'],
                                          username,
-                                         doc['content']['comments_count'] if 'comments_count' in doc['content'] else None
+                                         comments_count
                                          ])
             
                 
@@ -158,8 +163,7 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
         
         k+=1
 
-       
-            
+           
 def extract_document_mongo_user_collecton_to_postgress_data(filter_={},semple=None):
 
     if semple is None:

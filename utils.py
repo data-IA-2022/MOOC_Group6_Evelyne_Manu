@@ -17,20 +17,20 @@ def recur_message(msg, f, parent_id=None):
     #print("Recurse ", obj['id'], obj['depth'] if 'depth' in obj else '-')
     f(msg, parent_id)
     
-    try:
-        if 'children' in msg:
-            for child in msg['children']:
-                recur_message(child, f, parent_id=msg['id'])
-        if 'non_endorsed_responses' in msg:
-            for child in msg['non_endorsed_responses']:
-                recur_message(child, f, parent_id=msg['id'])
-        if 'endorsed_responses' in msg:
-            for child in msg['endorsed_responses']:
-                recur_message(child, f, parent_id=msg['id'])
-    except:
-        print("----------------------------------------------------------------------")  
-        print(f"error recur_message --> {msg['id']}  !!!!")  
-        print("----------------------------------------------------------------------")   
+    # try:
+    if 'children' in msg:
+        for child in msg['children']:
+            recur_message(child, f, parent_id=msg['id'])
+    if 'non_endorsed_responses' in msg:
+        for child in msg['non_endorsed_responses']:
+            recur_message(child, f, parent_id=msg['id'])
+    if 'endorsed_responses' in msg:
+        for child in msg['endorsed_responses']:
+            recur_message(child, f, parent_id=msg['id'])
+    # except:
+    #     print("----------------------------------------------------------------------")  
+    #     print(f"error recur_message --> {msg['id']}  !!!!")  
+    #     print("----------------------------------------------------------------------")   
 
 def nombre_messages(obj):
     '''
