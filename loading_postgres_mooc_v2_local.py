@@ -22,7 +22,7 @@ forum = client[config['mongo']['database']].forum
 user = client[config['mongo']['database']].user
 
 #connection à la base postgres
-Postgres_engine = create_engine(config['postgres']['url'])
+Postgres_engine = create_engine(config['postgres_mooc_v2_local']['url'])
 
 
 def traitement(msg, parent_id=None):
@@ -39,10 +39,43 @@ def traitement(msg, parent_id=None):
         if not msg['anonymous']:
             #insersion table User, course et Reselt
             extract_document_mongo_user_collecton_to_postgress_data({'username': msg['username']})
+            
+            
+        try:
+            votes = msg['votes'] if 'votes' in msg else None
+            if votes != None:
+                up_count = votes['up_count'] if 'up_count' in votes else None
+            else:
+                up_count=None
+        except:
+            print("----------------------------------------------------------------------")  
+            print(f"error traitement up_count --> {msg['id']}  !!!! ")  
+            print("----------------------------------------------------------------------")   
+            
+        try:
+             pinned = msg['pinned'] if 'pinned' in msg else None
+        except:
+             print("----------------------------------------------------------------------")  
+             print(f"error traitement pinned --> {msg['id']}  !!!! ")  
+             print("----------------------------------------------------------------------")  
+        
+        try:
+             courseware_title = msg['courseware_title'] if 'courseware_title' in msg else None
+        except:
+             print("----------------------------------------------------------------------")  
+             print(f"error traitement courseware_title --> {msg['id']}  !!!! ")  
+             print("----------------------------------------------------------------------")   
+             
+        try:
+             trd = msg['thread_id'] if 'thread_id' in msg else None
+        except:
+             print("----------------------------------------------------------------------")  
+             print(f"error traitement courseware_title --> {msg['id']}  !!!! ")  
+             print("----------------------------------------------------------------------")   
         
         Postgres_engine.execute("""INSERT INTO Message 
-                            (id, type, created_at, username, depth, body, parent_id, endorsed) 
-                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                            ("id", "type", "created_at", "username", "depth", "body", "parent_id", "endorsed","thread_id","courseware_title","pinned","votes_up_count") 
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                             ON CONFLICT DO NOTHING;""",
                             [msg['id'], 
                              msg['type'], 
@@ -51,10 +84,15 @@ def traitement(msg, parent_id=None):
                              msg['depth'] if 'depth' in msg else None,
                              msg['body'], 
                              parent_id,
-                             msg['endorsed'] if 'endorsed' in msg else None])
+                             msg['endorsed'] if 'endorsed' in msg else None,
+                             trd,
+                             courseware_title,
+                             pinned,
+                             up_count
+                             ])   
     except:
         print("----------------------------------------------------------------------")  
-        print(f"error traitement --> {msg['id']}  !!!! ")  
+        print(f"error traitement --> {msg['id']}  !!!!  ")  
         print("----------------------------------------------------------------------")   
 
 def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
@@ -79,7 +117,7 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
     for ident in cursor:
         start_time_op = time.time()
         
-        if k>37000:
+        if k>-1:
         
             doc = forum.find_one(filter=ident, projection={'annotated_content_info': 0, '_id': 1})
             
@@ -92,11 +130,13 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
            
          
                 #insersion table Treads
-                Postgres_engine.execute("""INSERT INTO "public"."Threads" ("_id", "title","course_id","username") VALUES (%s,%s,%s,%s) ON CONFLICT DO NOTHING;""", 
+                Postgres_engine.execute("""INSERT INTO "public"."Threads" ("_id", "title","course_id","username", "comments_count") VALUES (%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING;""", 
                                         [doc['_id'],
                                          doc['content']['title'], 
                                          doc['content']['course_id'],
-                                         username])
+                                         username,
+                                         doc['content']['comments_count'] if 'comments_count' in doc['content'] else None
+                                         ])
             
                 
                 #insersion récursive table message
@@ -117,7 +157,9 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
             print(ident)
         
         k+=1
-           
+
+       
+            
 def extract_document_mongo_user_collecton_to_postgress_data(filter_={},semple=None):
 
     if semple is None:
@@ -127,10 +169,14 @@ def extract_document_mongo_user_collecton_to_postgress_data(filter_={},semple=No
 
     for doc in cursor:
         
-        Postgres_engine.execute("""INSERT INTO "public"."User" ("_id", "username", "user_id") VALUES (%s,%s,%s) ON CONFLICT DO NOTHING;""", 
+        Postgres_engine.execute("""INSERT INTO "public"."User" ("_id", "username", "user_id","level_education","gender","year_of_burth","country") VALUES (%s,%s,%s,%s,%s,%s,%s ) ON CONFLICT DO NOTHING;""", 
                                                                 [str(doc['_id']),
                                                                  doc['username'],
-                                                                 doc['id'] if 'id' in doc else None
+                                                                 doc['id'] if 'id' in doc else None,
+                                                                 doc['level_education'] if 'id' in doc else None,
+                                                                 doc['gender'] if 'id' in doc else None,
+                                                                 doc['year_of_burth'] if 'id' in doc else None,
+                                                                 doc['country'] if 'id' in doc else None
                                                                  ])
 
         for sub_doc in doc:
@@ -146,6 +192,8 @@ def extract_document_mongo_user_collecton_to_postgress_data(filter_={},semple=No
                                                                              doc[sub_doc]['Certificate Eligible'] if 'Certificate Eligible' in doc[sub_doc] else None,
                                                                              doc[sub_doc]['Certificate Type'] if 'Certificate Type' in doc[sub_doc] else None
                                                                              ])
+                    
+                    # print(doc[sub_doc]['goals'])
                     pass
             except:
                 print("----------------------------------------------------------------------")  

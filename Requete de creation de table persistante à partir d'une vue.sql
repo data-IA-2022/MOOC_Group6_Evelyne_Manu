@@ -1,2 +1,2 @@
-CREATE TABLE table_messages_grade_titres_20000_threads AS
+CREATE TABLE table_messages_grade_titres_40000_threads AS
 SELECT * FROM vue_messages_grade_titres_threads;
