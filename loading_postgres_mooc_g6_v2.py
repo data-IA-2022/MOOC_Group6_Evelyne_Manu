@@ -173,10 +173,10 @@ def extract_document_mongo_user_collecton_to_postgress_data(filter_={},semple=No
                                                                 [str(doc['_id']),
                                                                  doc['username'],
                                                                  doc['id'] if 'id' in doc else None,
-                                                                 doc['level_education'] if 'id' in doc else None,
-                                                                 doc['gender'] if 'id' in doc else None,
-                                                                 doc['year_of_burth'] if 'id' in doc else None,
-                                                                 doc['country'] if 'id' in doc else None
+                                                                 doc['level_education'] if 'level_education' in doc else None,
+                                                                 doc['gender'] if 'gender' in doc else None,
+                                                                 doc['year_of_burth'] if 'year_of_burth' in doc else None,
+                                                                 doc['country'] if 'country' in doc else None
                                                                  ])
 
         for sub_doc in doc:
