@@ -117,7 +117,7 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
     for ident in cursor:
         start_time_op = time.time()
         
-        if k>2000:
+        if k>2100:
         
             doc = forum.find_one(filter=ident, projection={'annotated_content_info': 0, '_id': 1})
             
@@ -158,11 +158,10 @@ def extract_document_mongo_forum_collecton_to_postgress_data(semple=None):
                     "  -Temps d'exécution operation: {:.1f} secondes".format(time.time() - start_time_op))
 
         else:
-            print(k)
+            
             print(ident)
         
         k+=1
-
            
 def extract_document_mongo_user_collecton_to_postgress_data(filter_={},semple=None):
 
