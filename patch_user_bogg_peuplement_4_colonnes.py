@@ -8,7 +8,7 @@ Created on Tue Mar  7 18:02:39 2023
 import json, utils, yaml
 from pymongo import MongoClient
 from sqlalchemy import create_engine
-import time
+import time,sys
 
 #ouverture du fichier de configuration
 with open('config.yml', 'r') as file:
@@ -25,27 +25,65 @@ user = client[config['mongo']['database']].user
 Postgres_engine = create_engine(config['postgres_mooc_v2_local']['url'])
 
 
-result = Postgres_engine.execute("""select users."_id" as id from users""")
+result = Postgres_engine.execute("""select users."username" as id from users""")
 
 for _id in result:
-    print(_id)
+    # print(_id)
     
-    doc = user.find_one(filter=None, projection={'annotated_content_info': 0, '_id': 1})
-  
-    
-    
+    doc = user.find_one(filter={'username': 'Osiatis_FUN'})
+    # print(doc)
+
+    # sys.exit()
+
     for sub_doc in doc:
+        
+        
         if sub_doc != '_id' and sub_doc != 'id' and sub_doc != 'username':
-            print(sub_doc)
-    #     
+        
+            query = """
+                        UPDATE "public"."users"
+                          SET "level_education" = %s,
+                              "gender" = %s,
+                              "year_of_burth" = %s,
+                              "country" = %s
+                          WHERE "username" = %s;
+                    """
             
-    #         # Postgres_engine.execute("""INSERT INTO "public"."User" ("_id", "username", "user_id","level_education","gender","year_of_burth","country") VALUES (%s,%s,%s,%s,%s,%s,%s ) ON CONFLICT DO NOTHING;""", 
-    #         #                                                         [str(doc['_id']),
-    #         #                                                          doc['username'],
-    #         #                                                          doc['id'] if 'id' in doc else None,
-    #         #                                                          doc['level_education'] if 'level_education' in doc else None,
-    #         #                                                          doc['gender'] if 'gender' in doc else None,
-    #         #                                                          doc['year_of_burth'] if 'year_of_burth' in doc else None,
-    #         #                                                          doc['country'] if 'country' in doc else None
-    #         #                                                          ])
-    #         pass
+            try:
+                if doc[sub_doc]['year_of_birth'] != None:
+                    new_year_of_burth = doc[sub_doc]['year_of_birth']
+                else:
+                    new_year_of_burth='N/A'
+            except:
+                new_year_of_burth=None
+                
+            try:
+                if doc[sub_doc]['gender'] != None:
+                    new_gender = doc[sub_doc]['gender']
+                else:
+                    new_gender='N/A'
+            except:
+                new_gender=None
+                
+            try:
+                if doc[sub_doc]['level_education'] != None:
+                    new_level_education = doc[sub_doc]['level_education']
+                else:
+                    new_level_education='N/A'
+            except:
+                new_level_education=None
+                
+            try:
+                if doc[sub_doc]['country'] != None:
+                    new_country = doc[sub_doc]['country']
+                else:
+                    new_country='N/A'
+            except:
+                new_country=None
+                
+            print(new_country) #if 'level_education' in doc else None
+          
+            record_id =  str(doc['_id'])
+ 
+            Postgres_engine.execute(query, (new_level_education, new_gender, new_year_of_burth, new_country, record_id))
+     
