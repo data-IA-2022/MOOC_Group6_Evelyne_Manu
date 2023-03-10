@@ -1,0 +1,13 @@
+mysql:
+  host: greta-p2-g2.westeurope.cloudapp.azure.com
+  user: root
+  password: greta2023
+  driver: mysql
+  database: test
+
+PG:
+  host: localhost
+  user: postgres
+  password: greta2023
+  database: mooc
+  driver: postgresql+psycopg2
