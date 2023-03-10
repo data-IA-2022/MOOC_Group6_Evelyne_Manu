@@ -195,6 +195,13 @@ def extract_document_mongo_user_collecton_to_postgress_data(filter_={},semple=No
                                                                  ])
 
         for sub_doc in doc:
+            
+            
+            
+            
+            
+            
+            
             try:
                 if sub_doc != '_id' and sub_doc != 'id' and sub_doc != 'username':
             
