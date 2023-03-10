@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+ <body>
+  <h1>{{title}}</h1>
+   
+   <form action = "http://localhost:5000/analyse" method = "post">
+      <p><input type = "submit" value = "<<<" name = "form"/></p>
+   </form>     
+  
+  <div id='chart' class='chart'”></div>
+</body>
+
+
+<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+<script type='text/javascript'>
+  var graphs = {{graphJSON | safe}};
+  Plotly.plot('chart',graphs,{});
+</script>
+</html>
